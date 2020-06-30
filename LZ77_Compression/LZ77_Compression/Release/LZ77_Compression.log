@@ -1,0 +1,11 @@
+﻿  LZ.cpp
+  main.cpp
+  ReadWriteTools.cpp
+C:\Users\Artem\source\repos\LZ77_Compression\LZ77_Compression\LZ.cpp(46,19): warning C4018:  <=: несоответствие типов со знаком и без знака
+  tests.cpp
+C:\Users\Artem\source\repos\LZ77_Compression\LZ77_Compression\ReadWriteTools.cpp(98,10): warning C4244:  return: преобразование "__int64" в "size_t", возможна потеря данных
+  Создание кода
+  Previous IPDB not found, fall back to full compilation.
+  All 666 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Создание кода завершено
+  LZ77_Compression.vcxproj -> C:\Users\Artem\source\repos\LZ77_Compression\Release\LZ77_Compression.exe

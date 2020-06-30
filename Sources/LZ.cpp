@@ -1,26 +1,27 @@
 ﻿#include "LZ.hpp"
 
 // Получаем самый длинный совпадающий префикс
-LZ77::Triplet LZ77::slidingWindow::getLongestPrefix()
+Triplet LZ77::slidingWindow::getLongestPrefix()
 {
 	// Наименьший код-тройка 
-	Triplet code(0, 0, lookheadBuffer[0]);
+	Triplet code(0, 0, lookaheadBuffer[0]);
 
-	size_t lookCurrLen = lookheadBuffer.length() - 1;
+	size_t lookCurrLen = lookaheadBuffer.length() - 1;
 	size_t histCurrLen = historyBuffer.length();
 
 	// Просматриваем все подстроки в буфере предпросмотра
 	for (size_t i = 1; i <= std::min(lookCurrLen, histCurrLen); i++)
 	{
 		// Формируем подстроку нужной длины
-		std::string s = lookheadBuffer.substr(0, i);
+		std::string s = lookaheadBuffer.substr(0, i);
 
 		size_t pos = historyBuffer.find(s);
 		if (pos == std::string::npos)
 			break;
 
 		// Проверяем, не сформировалась ли на предыдущем шаге текущая подстрока + могут ли быть повторы 
-		if ((historyBuffer.compare(histCurrLen - i, i, s) == 0) && (lookheadBuffer[0] == lookheadBuffer[i]))
+		if ((historyBuffer.compare(histCurrLen - i, i, s) == 0) 
+		&& (lookaheadBuffer[0] == lookaheadBuffer[i]))
 			pos = histCurrLen - i;
 
 		// Если нашли подстроку в буфере истории, то смотрим, есть ли следом в буфере предпросмотра её повторения
@@ -28,13 +29,14 @@ LZ77::Triplet LZ77::slidingWindow::getLongestPrefix()
 		if (histCurrLen == pos + i)
 		{
 			// Проверяем, есть ли в буфере предпросмотра полные повторения текущей подстроки (следом за текущей)
-			while ((lookCurrLen >= i + fullRepeat + i) && (lookheadBuffer.compare(i + fullRepeat, i, s) == 0))
+			while ((lookCurrLen >= i + fullRepeat + i) 
+			&& (lookaheadBuffer.compare(i + fullRepeat, i, s) == 0))
 				fullRepeat += i;
 
 			// Проверяем, есть ли в буфере предпросмотра частичные повторения текущей подстроки (следом за текущей)
 			size_t partRepeat = i - 1;
 			while (!((lookCurrLen >= i + fullRepeat + partRepeat)
-			&& (lookheadBuffer.compare(i + fullRepeat, partRepeat, s, 0, partRepeat) == 0)) && partRepeat)
+			&& (lookaheadBuffer.compare(i + fullRepeat, partRepeat, s, 0, partRepeat) == 0)) && partRepeat)
 				partRepeat--;
 
 			fullRepeat += partRepeat;
@@ -42,7 +44,7 @@ LZ77::Triplet LZ77::slidingWindow::getLongestPrefix()
 
 		// Cравниваем длины предыдущего максимального узла и текущего
 		if (code.length <= i + fullRepeat)
-			code = Triplet(histCurrLen - pos, i + fullRepeat, lookheadBuffer[i + fullRepeat]);
+			code = Triplet(histCurrLen - pos, i + fullRepeat, lookaheadBuffer[i + fullRepeat]);
 	}
 	return code;
 }
@@ -53,18 +55,18 @@ void LZ77::compress()
 	do
 	{
 		// Добавляем символы в освободившуюся часть буфера предпросмотра
-		if ((window.lookheadBuffer.length() < window.lookBufferMax) && (byteDataString.length() != 0))
+		if ((window.lookaheadBuffer.length() < window.lookBufferMax) && (byteDataString.length() != 0))
 		{
-			int len = window.lookBufferMax - window.lookheadBuffer.length();
-			window.lookheadBuffer.append(byteDataString, 0, len);
+			int len = window.lookBufferMax - window.lookaheadBuffer.length();
+			window.lookaheadBuffer.append(byteDataString, 0, len);
 			byteDataString.erase(0, len);
 		}
 
-		LZ77::Triplet triplet = window.getLongestPrefix();
+		Triplet triplet = window.getLongestPrefix();
 
 		// Добавляем в буфер истории отработанную часть буфера предпросмотра
-		window.historyBuffer.append(window.lookheadBuffer, 0, triplet.length + 1);
-		window.lookheadBuffer.erase(0, triplet.length + 1); // Удаляем эту часть из окна предпросмотра
+		window.historyBuffer.append(window.lookaheadBuffer, 0, triplet.length + 1);
+		window.lookaheadBuffer.erase(0, triplet.length + 1); // Удаляем эту часть из окна предпросмотра
 
 		// Если длина буфера больше максимальной, удаялем самые старые символы
 		if (window.historyBuffer.length() > window.histBufferMax)
@@ -72,7 +74,7 @@ void LZ77::compress()
 
 		encoded.push_back(triplet);
 
-	} while (window.lookheadBuffer.length());
+	} while (window.lookaheadBuffer.length());
 }
 
 // Декомпрессинг
@@ -97,87 +99,29 @@ void LZ77::decompress()
 	}
 }
 
-// Получаем int из массива char (байт) 
-int intFromBytes(std::istream& is)
+// Функция сброса
+void LZ77::reset()
 {
-	char bytes[4];
-	for (int i = 0; i < 4; ++i)
-		is.get(bytes[i]);
-
-	int integer;
-	std::memcpy(&integer, &bytes, 4);
-	return integer;
+	encoded.clear();
+	window.historyBuffer.clear();
+	window.lookaheadBuffer.clear();
+	byteDataString.clear();
 }
 
-// Переводим int в массив char (байт)
-void intToBytes(std::ostream& os, int value)
+// Функция упаковки
+void LZ77::pack(std::filesystem::path& inPath, std::filesystem::path& outPath)
 {
-	char bytes[4];
-	std::memcpy(&bytes, &value, 4);
-	os.write(bytes, 4);
+	readFileUncompressed(byteDataString, inPath);
+	compress();
+	createFileCompressed(encoded, outPath);
+	reset();
 }
 
-// Читаем несжатый файл
-void LZ77::readFileUncompressed(std::filesystem::path& path)
+// Функция распаковки
+void LZ77::unpack(std::filesystem::path& inPath, std::filesystem::path& outPath)
 {
-	std::ifstream file(path, std::ios::in | std::ios::binary);
-
-	if (file.is_open())
-	{
-		// Конструируем строку из потока с помощью итератора на начало файла и eof
-		byteDataString = std::string(std::istreambuf_iterator<char>(file), {});
-		file.close();
-	}
-	else
-		throw std::ios_base::failure("Failed to open the file");
-}
-
-// Создаём сжатый файл
-void LZ77::createFileCompressed(std::filesystem::path& path)
-{
-	std::ofstream out(path / "packed.lz77", std::ios::out | std::ios::binary);
-
-	if (out.is_open())
-	{
-		for (auto triplet : encoded)
-		{
-			intToBytes(out, triplet.offset);
-			out << triplet.next;
-			intToBytes(out, triplet.length);
-		}
-		out.close();
-	}
-	else
-		throw std::ios_base::failure("Failed to open the file");
-}
-
-// Читаем сжатый файл
-void LZ77::readFileCompressed(std::filesystem::path& path)
-{
-	std::ifstream file(path, std::ios::in | std::ios::binary);
-
-	if (file.is_open())
-	{
-		// Читаем код
-		Triplet element;
-
-		while (file.peek() != std::ifstream::traits_type::eof())
-		{
-			element.offset = intFromBytes(file);
-			file.get(element.next);
-			element.length = intFromBytes(file);
-			encoded.push_back(element);
-		}
-		file.close();
-	}
-	else
-		throw std::ios_base::failure("Failed to open the file");
-}
-
-// Создаём несжатый файл
-void LZ77::createFileUncompressed(std::filesystem::path& path)
-{
-	std::ofstream out(path / "unpacked.unlz77", std::ios::out | std::ios::binary);
-	out << byteDataString;
-	out.close();
+	readFileCompressed(encoded, inPath);
+	decompress();
+	createFileUncompressed(byteDataString, outPath);
+	reset();
 }

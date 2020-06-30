@@ -1,0 +1,8 @@
+﻿  LZ.cpp
+  ReadWriteTools.cpp
+C:\Users\Artem\source\repos\LZ77_Compression\LZ77_Compression\LZ.cpp(46,19): warning C4018:  <=: несоответствие типов со знаком и без знака
+  main.cpp
+  tests.cpp
+  Создание кода...
+C:\Users\Artem\source\repos\LZ77_Compression\LZ77_Compression\ReadWriteTools.cpp(98,10): warning C4244:  return: преобразование "__int64" в "size_t", возможна потеря данных
+  LZ77_Compression.vcxproj -> C:\Users\Artem\source\repos\LZ77_Compression\Debug\LZ77_Compression.exe
